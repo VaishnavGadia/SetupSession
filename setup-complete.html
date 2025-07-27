@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Setup Complete</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #fff;
+      flex-direction: column;
+    }
+    .message { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="message" id="heading">Processing setup...</div>
+  <div class="message" id="details"></div>
+
+  <script>
+    function sendResult(success, message) {
+      const payload = { type: "VERIFY_RESULT", success, message };
+      if (window.FlutterFlowChannel) {
+        FlutterFlowChannel.postMessage(JSON.stringify(payload));
+      }
+      window.parent?.postMessage(payload, '*');
+    }
+
+    async function completeSetup() {
+      const heading = document.getElementById("heading");
+      const details = document.getElementById("details");
+
+      try {
+        const sessionId = new URLSearchParams(window.location.search).get("session_id");
+        if (!sessionId) throw new Error("Missing session_id");
+
+        const res = await fetch("https://jtrenbwpefzevqlkcfly.supabase.co/functions/v1/complete-setup-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          throw new Error(result.error || "Could not confirm payment method.");
+        }
+
+        heading.textContent = "✅ Payment method saved";
+        heading.classList.add("success");
+        details.textContent = result.message || "Setup complete!";
+        sendResult(true, result.message || "Success");
+
+      } catch (err) {
+        heading.textContent = "❌ Setup failed";
+        heading.classList.add("error");
+        details.textContent = err.message;
+        sendResult(false, err.message);
+      }
+    }
+
+    completeSetup();
+  </script>
+</body>
+</html>
