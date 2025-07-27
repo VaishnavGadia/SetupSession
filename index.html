@@ -48,7 +48,7 @@
   async function initializeSetup(accessToken) {
     try {
       console.log("1️⃣ Creating Setup Session...");
-      const res = await fetch("https://jtrenbwpefzevqlkcfly.supabase.co/functions/v1/create-setup-checkout-session", {
+      const res = await fetch("https://jtrenbwpefzevqlkcfly.supabase.co/functions/v1/create-setup-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
