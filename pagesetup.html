@@ -68,7 +68,7 @@
       const { clientSecret, publishableKey } = body;
       const stripe = Stripe(publishableKey);
 
-      const checkout = await stripe.initEmbeddedCheckout({ clientSecret });
+      const checkout = await stripe.initEmbeddedCheckout({fetchClientSecret: () => Promise.resolve(clientSecret)});
 
       document.getElementById("loader").style.display = "none";
       checkout.mount("#checkout");
