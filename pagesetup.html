@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🔐 Setup Default Payment Method</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <meta http-equiv="Permissions-Policy" content="payment=*"/>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      flex-direction: column;
+    }
+    #checkout { width: 100%; max-width: 500px; margin: 0 auto; }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #00b386;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 2s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #error-message {
+      color: #d32f2f;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      margin-top: 1rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="loader" id="loader"></div>
+  <div id="checkout"></div>
+  <div id="error-message"></div>
+
+<script>
+  function sendResult(success, message) {
+    const payload = { type: "VERIFY_RESULT", success, message };
+    if (window.FlutterFlowChannel) {
+      FlutterFlowChannel.postMessage(JSON.stringify(payload));
+    }
+    window.parent?.postMessage(payload, '*');
+  }
+
+  async function initialize(token) {
+    try {
+      const res = await fetch("https://jtrenbwpefzevqlkcfly.supabase.co/functions/v1/create-setup-session", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const body = await res.json();
+      if (!res.ok || body.error) {
+        throw new Error(body.error || "Failed to create setup session.");
+      }
+
+      const { clientSecret, publishableKey } = body;
+      const stripe = Stripe(publishableKey);
+
+      const checkout = await stripe.initEmbeddedCheckout({
+        fetchClientSecret: () => Promise.resolve(clientSecret),
+      });
+
+      document.getElementById("loader").style.display = "none";
+      checkout.mount("#checkout");
+    } catch (err) {
+      console.error(err);
+      document.getElementById("loader").style.display = "none";
+      document.getElementById("error-message").textContent = err.message;
+      sendResult(false, err.message);
+    }
+  }
+
+  // Receive Supabase JWT from FlutterFlow
+  window.addEventListener("message", (event) => {
+    const { type, token } = event.data || {};
+    if (type === "TOKEN" && token) {
+      initialize(token);
+    }
+  });
+
+  // Fallback: get token from URL query param (if running standalone)
+  const urlToken = new URLSearchParams(window.location.search).get("token");
+  if (urlToken) {
+    initialize(urlToken);
+  }
+</script>
+</body>
+</html>
