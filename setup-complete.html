@@ -40,6 +40,11 @@
         const sessionId = new URLSearchParams(window.location.search).get("session_id");
         if (!sessionId) throw new Error("Missing session_id");
 
+        // Clean the URL (remove query string)
+if (window.history.replaceState) {
+  window.history.replaceState(null, null, window.location.pathname);
+}
+
         const res = await fetch("https://jtrenbwpefzevqlkcfly.supabase.co/functions/v1/complete-setup-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
